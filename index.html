@@ -206,6 +206,8 @@
         getComputedStyle(document.documentElement).getPropertyValue("--bubble-5").trim() || "#66bb6a"
       ];
 
+      let hasWon = false;
+
       class Bubble {
         constructor(options) {
           this.radius = options.radius;
@@ -231,8 +233,8 @@
         update(boundsWidth, boundsHeight) {
           if (this.isPuppy) {
             this.puppyFrames++;
-            // After ~2 seconds at 60fps, return to being a bubble
-            if (this.puppyFrames > 120) {
+            // After ~2 seconds at 60fps, return to being a bubble (unless player has won)
+            if (!hasWon && this.puppyFrames > 120) {
               this.reset();
             }
             return;
@@ -441,6 +443,11 @@
               bubble.puppyFrames = 0;
             }
             playPop();
+
+            // Check win condition: all bubbles are currently puppies
+            if (!hasWon && bubbles.every((b) => b.isPuppy)) {
+              hasWon = true;
+            }
             break;
           }
         }
@@ -460,6 +467,67 @@
         { passive: true }
       );
 
+      function drawWinScreen(rect) {
+        // Soft dark overlay
+        ctx.save();
+        ctx.fillStyle = "rgba(5, 5, 9, 0.85)";
+        ctx.fillRect(0, 0, rect.width, rect.height);
+
+        // Fireworks background
+        const fireworksCount = 8;
+        for (let i = 0; i < fireworksCount; i++) {
+          const cx = (Math.sin((performance.now() / 800) + i) * 0.4 + 0.5) * rect.width;
+          const cy = (Math.cos((performance.now() / 900) + i * 1.3) * 0.4 + 0.5) * rect.height * 0.9;
+          const maxR = Math.min(rect.width, rect.height) * 0.45;
+          const r = (Math.sin(performance.now() / 500 + i) * 0.35 + 0.65) * maxR;
+
+          const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+          const hue = (i * 45 + (performance.now() / 30)) % 360;
+          gradient.addColorStop(0, `hsla(${hue}, 90%, 70%, 1)`);
+          gradient.addColorStop(0.4, `hsla(${(hue + 40) % 360}, 100%, 65%, 0.9)`);
+          gradient.addColorStop(0.7, `hsla(${(hue + 80) % 360}, 100%, 60%, 0.0)`);
+          gradient.addColorStop(1, "rgba(0, 0, 0, 0)");
+
+          ctx.globalCompositeOperation = "screen";
+          ctx.fillStyle = gradient;
+          ctx.beginPath();
+          ctx.arc(cx, cy, r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // YOU WIN text
+        ctx.globalCompositeOperation = "source-over";
+        const title = "YOU WIN!";
+        ctx.fillStyle = "#ffffff";
+        ctx.textAlign = "center";
+
+        const baseSize = Math.min(rect.width, rect.height) * 0.12;
+        ctx.font = `900 ${baseSize}px system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif`;
+
+        const textX = rect.width / 2;
+        const textY = rect.height / 2;
+
+        // Glow behind text
+        ctx.shadowColor = "rgba(255, 255, 255, 0.9)";
+        ctx.shadowBlur = baseSize * 0.6;
+        ctx.fillText(title, textX, textY);
+
+        // Subtle outline
+        ctx.shadowBlur = 0;
+        ctx.lineWidth = baseSize * 0.06;
+        ctx.strokeStyle = "rgba(0, 0, 0, 0.85)";
+        ctx.strokeText(title, textX, textY);
+
+        // Small subtitle
+        ctx.font = `500 ${baseSize * 0.28}px system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif`;
+        ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
+        ctx.shadowColor = "rgba(0, 0, 0, 0.6)";
+        ctx.shadowBlur = baseSize * 0.3;
+        ctx.fillText("All five bubbles became puppies at once!", textX, textY + baseSize * 0.8);
+
+        ctx.restore();
+      }
+
       function animate() {
         const rect = canvas.getBoundingClientRect();
         ctx.clearRect(0, 0, rect.width, rect.height);
@@ -474,6 +542,10 @@
           bubble.update(rect.width, rect.height);
           bubble.draw(ctx);
         });
+
+        if (hasWon) {
+          drawWinScreen(rect);
+        }
 
         requestAnimationFrame(animate);
       }
