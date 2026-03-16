@@ -207,6 +207,7 @@
       ];
 
       let hasWon = false;
+      let winStartedAt = null;
 
       class Bubble {
         constructor(options) {
@@ -447,6 +448,7 @@
             // Check win condition: all bubbles are currently puppies
             if (!hasWon && bubbles.every((b) => b.isPuppy)) {
               hasWon = true;
+              winStartedAt = performance.now();
             }
             break;
           }
@@ -545,6 +547,13 @@
 
         if (hasWon) {
           drawWinScreen(rect);
+
+          // After a short celebration, reset the game back to 5 bouncing bubbles
+          if (winStartedAt !== null && performance.now() - winStartedAt > 3500) {
+            hasWon = false;
+            winStartedAt = null;
+            bubbles.forEach((bubble) => bubble.reset());
+          }
         }
 
         requestAnimationFrame(animate);
