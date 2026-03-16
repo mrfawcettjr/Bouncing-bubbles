@@ -278,6 +278,38 @@
         new Bubble({ radius: 25, color: colors[4], maxSpeed: 2.2 })
       ];
 
+      function handlePop(clientX, clientY) {
+        const rect = canvas.getBoundingClientRect();
+        const x = clientX - rect.left;
+        const y = clientY - rect.top;
+
+        // Find the top-most bubble that contains the tap/click point
+        for (let i = bubbles.length - 1; i >= 0; i--) {
+          const bubble = bubbles[i];
+          const dx = x - bubble.x;
+          const dy = y - bubble.y;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+          if (distance <= bubble.radius) {
+            bubble.reset();
+            break;
+          }
+        }
+      }
+
+      canvas.addEventListener("click", (event) => {
+        handlePop(event.clientX, event.clientY);
+      });
+
+      canvas.addEventListener(
+        "touchstart",
+        (event) => {
+          const touch = event.touches[0];
+          if (!touch) return;
+          handlePop(touch.clientX, touch.clientY);
+        },
+        { passive: true }
+      );
+
       function animate() {
         const rect = canvas.getBoundingClientRect();
         ctx.clearRect(0, 0, rect.width, rect.height);
