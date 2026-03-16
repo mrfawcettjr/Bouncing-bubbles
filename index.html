@@ -278,6 +278,43 @@
         new Bubble({ radius: 25, color: colors[4], maxSpeed: 2.2 })
       ];
 
+      // Simple soft popping sound using Web Audio API
+      let audioCtx = null;
+      function playPop() {
+        try {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (!AudioContext) return;
+
+          if (!audioCtx) {
+            audioCtx = new AudioContext();
+          }
+
+          if (audioCtx.state === "suspended") {
+            audioCtx.resume();
+          }
+
+          const now = audioCtx.currentTime;
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+
+          osc.type = "triangle";
+          osc.frequency.setValueAtTime(700, now);
+          osc.frequency.exponentialRampToValueAtTime(1800, now + 0.08);
+
+          gain.gain.setValueAtTime(0, now);
+          gain.gain.linearRampToValueAtTime(0.15, now + 0.01);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+
+          osc.start(now);
+          osc.stop(now + 0.14);
+        } catch (e) {
+          // Fail silently if audio is unavailable
+        }
+      }
+
       function handlePop(clientX, clientY) {
         const rect = canvas.getBoundingClientRect();
         const x = clientX - rect.left;
@@ -291,6 +328,7 @@
           const distance = Math.sqrt(dx * dx + dy * dy);
           if (distance <= bubble.radius) {
             bubble.reset();
+            playPop();
             break;
           }
         }
